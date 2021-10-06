@@ -19,10 +19,13 @@ export FORCE_REBUILD=$FORCE_REBUILD
 
 if [ "$(uname)" == "Darwin" ]; then
   export MACOSX_DEPLOYMENT_TARGET=10.12
-  export CFLAGS="-mmacosx-version-min=10.12"
-  export CCFLAGS="-mmacosx-version-min=10.12"
-  export CXXFLAGS="-mmacosx-version-min=10.12"
-  export LDFLAGS="-mmacosx-version-min=10.12"
+  export MACOS_ARCH_FLAGS="-arch arm64 -arch x86_64"
+  export MACOS_TARGET_FLAGS="-mmacosx-version-min=$MACOSX_DEPLOYMENT_TARGET"
+  export CFLAGS="$MACOS_TARGET_FLAGS $MACOS_ARCH_FLAGS"
+  export CCFLAGS="$MACOS_TARGET_FLAGS"
+  export CXXFLAGS="$MACOS_TARGET_FLAGS"
+  export LDFLAGS="$MACOS_TARGET_FLAGS $MACOS_ARCH_FLAGS"
+  export CMAKE_OSX_ARCHITECTURES="arm64;x86_64"
 fi
 
 function cat_slower() {
@@ -328,6 +331,7 @@ export npm_config_curl_config_bin="$LIBCURL_DEST_FOLDER/build/$LIBCURL_RELEASE/b
 export npm_config_curl_static_build="true"
 export npm_config_node_libcurl_cpp_std="$NODE_LIBCURL_CPP_STD"
 export npm_config_build_from_source="true"
+export npm_config_macos_universal_build="true"
 export npm_config_runtime="$runtime"
 export npm_config_dist_url="$dist_url"
 export npm_config_target="$target"
@@ -337,6 +341,7 @@ echo "npm_config_curl_config_bin=$npm_config_curl_config_bin"
 echo "npm_config_curl_static_build=$npm_config_curl_static_build"
 echo "npm_config_node_libcurl_cpp_std=$npm_config_node_libcurl_cpp_std"
 echo "npm_config_build_from_source=$npm_config_build_from_source"
+echo "npm_config_macos_universal_build=$npm_config_macos_universal_build"
 echo "npm_config_runtime=$npm_config_runtime"
 echo "npm_config_dist_url=$npm_config_dist_url"
 echo "npm_config_target=$npm_config_target"

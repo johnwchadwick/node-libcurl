@@ -29,33 +29,60 @@ fi
 
 CFLAGS=${CFLAGS:-}
 
-# @TODO Verify if iconv is required on musl
-# 
-# 
-# * GNU libiconv
-#   + Not needed on systems with
-#       - glibc 2.2 or newer, or
-#       - MacOS X 10.3 or newer, or
-#       - NetBSD 3.0 or newer.
-#     But highly recommended on all other systems.
-#     Needed for character set conversion of strings from/to Unicode.
-#   + Homepage:
-#     https://www.gnu.org/software/libiconv/
-#   + Download:
-#     https://ftp.gnu.org/gnu/libiconv/
-#   + If it is installed in a nonstandard directory, pass the option
-#     --with-libiconv-prefix=DIR to 'configure'.
+build() {
+  # @TODO Verify if iconv is required on musl
+  # 
+  # 
+  # * GNU libiconv
+  #   + Not needed on systems with
+  #       - glibc 2.2 or newer, or
+  #       - MacOS X 10.3 or newer, or
+  #       - NetBSD 3.0 or newer.
+  #     But highly recommended on all other systems.
+  #     Needed for character set conversion of strings from/to Unicode.
+  #   + Homepage:
+  #     https://www.gnu.org/software/libiconv/
+  #   + Download:
+  #     https://ftp.gnu.org/gnu/libiconv/
+  #   + If it is installed in a nonstandard directory, pass the option
+  #     --with-libiconv-prefix=DIR to 'configure'.
 
-# Debug
-# CFLAGS="$CFLAGS -fPIC" ./configure --prefix=$build_folder --disable-shared --debug "${@:3}"
+  # Debug
+  # CFLAGS="$CFLAGS -fPIC" ./configure --prefix=$build_folder --disable-shared --debug $1
 
-# Release - Static
-# --with-libiconv-prefix=$LIBICONV_BUILD_FOLDER \
-CFLAGS="$CFLAGS -fPIC" ./configure \
-  --prefix=$build_folder \
-  --disable-shared "${@:3}"
+  # Release - Static
+  # --with-libiconv-prefix=$LIBICONV_BUILD_FOLDER \
+  CFLAGS="$CFLAGS -fPIC" ./configure \
+    --prefix=$build_folder \
+    --disable-shared $1
 
-# Release - Both
-# CFLAGS="$CFLAGS -fPIC" ./configure --prefix=$build_folder "${@:3}"
+  # Release - Both
+  # CFLAGS="$CFLAGS -fPIC" ./configure --prefix=$build_folder $1
 
-make && make install
+  make && make install
+}
+
+if [ "$(uname)" == "Darwin" ]; then
+  # libunistring does not build universally, so we need to build two binaries
+  # and merge them. This is a bit ugly...
+
+  build_arch() {
+    CFLAGS="$MACOS_TARGET_FLAGS -arch $1" \
+    LDFLAGS="$MACOS_TARGET_FLAGS -arch $1" \
+    build --host=$2-apple-macosx
+    mv $build_folder/lib/libunistring{,-$1}.a
+  }
+
+  build_arch x86_64 x86_64
+  make distclean || true
+  build_arch arm64 aarch64
+
+  lipo -create -output $build_folder/lib/libunistring.a \
+    $build_folder/lib/libunistring-{x86_64,arm64}.a
+
+  # Reset flags.
+  export CFLAGS="$MACOS_TARGET_FLAGS $MACOS_ARCH_FLAGS"
+  export LDFLAGS="$MACOS_TARGET_FLAGS $MACOS_ARCH_FLAGS"
+else
+  build
+fi

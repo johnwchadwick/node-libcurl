@@ -12,6 +12,7 @@
     'curl_config_bin%': 'node <(module_root_dir)/scripts/curl-config.js',
     'node_libcurl_no_setlocale%': 'false',
     'node_libcurl_cpp_std%': '<!(node <(module_root_dir)/scripts/cpp-std.js)',
+    'macos_universal_build%': 'false',
   },
   'targets': [
     {
@@ -154,10 +155,14 @@
               'defines': [
                   'CURL_STATICLIB',
               ],
-              'libraries': [
-                '<!@(<(curl_config_bin) --static-libs)',
-              ],
               'xcode_settings': {
+                'OTHER_LDFLAGS': [
+                  # HACK: -framework CoreFoundation appears twice, but CoreFoundation is a singleton
+                  # because it doesn't start with a -. We need to remove one of the instances of
+                  # -framework CoreFoundation or GYP will break our args.
+                  '-static',
+                  '<!@(<(curl_config_bin) --static-libs | sed "s/-framework CoreFoundation//")',
+                ],
                 'LD_RUNPATH_SEARCH_PATHS': [
                   '<!@(<(curl_config_bin) --static-libs | node -e "console.log(require(\'fs\').readFileSync(0, \'utf-8\').split(\' \').filter(i => i.startsWith(\'-L\')).join(\' \').replace(/-L/g, \'\'))")'
                 ],
@@ -174,6 +179,22 @@
                   '/usr/local/lib',
                   '/usr/lib'
                 ],
+              }
+            }],
+            ['macos_universal_build=="true"', {
+              'xcode_settings': {
+                'OTHER_CPLUSPLUSFLAGS' : [
+                  '-arch x86_64',
+                  '-arch arm64'
+                ],
+                'OTHER_CFLAGS': [
+                  '-arch x86_64',
+                  '-arch arm64'
+                ],
+                'OTHER_LDFLAGS': [
+                  '-arch x86_64',
+                  '-arch arm64'
+                ]
               }
             }]
           ],
